@@ -24,6 +24,29 @@ library(lme4)
 
 ##46
 
+In our graphs below we can see the signs of some trends for our data. In our first graph, we look at the effects of power on acuity, and grouped by which eye was being tested. In this graph we can see that different power levels have different levels of acuity, but we can also see that over the left and right eye appear to have relatively the same means, but the variability in the right eye seems to be larger than that in the left. We will take note of that for our future models. 
+
+Our second graph is grouping acuity based on each subject/person. We can see that each subject appears to have different means and possibly different levels of variability. This means that we should most likely use a random intercepts model to best fit our data. 
+
+
+
+```{r}
+vision <- read.csv("http://math.carleton.edu/Chihara/Stats345/Vision.csv")
+```
+
+```{r}
+ggplot(vision, aes(x = power, y = acuity)) + geom_boxplot() + facet_wrap(~eye)
+```
+
+```{r}
+ggplot(vision, aes(x = subject, y = acuity)) + geom_point() 
+```
+
+```{r}
+vision.lmer <- lmer(acuity~(1|subject), data = vision)
+summary(vision.lmer, cor = F)
+```
+
 ##47
 
 ##48
