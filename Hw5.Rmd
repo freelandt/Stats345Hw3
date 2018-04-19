@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, comment = NA, warning = F, message = F)
 ```
 
 ```{r}
@@ -14,11 +14,59 @@ library(tidyverse)
 library(lme4)
 ```
 
+```{r}
+income <- read.csv("http://math.carleton.edu/Chihara/Stats345/Income.csv")
+```
+
 ##42
+
+From some initial data exploration, I thought it would be best to look at income on the log() scale since there was such a large range on incomes. When looking at the relationship between the log(income) and some of the explanatory variables, I saw that there appears to be different intercepts and possibly different slopes for income~time based on sex. There also looks like age in 1968 and education could be related to different slopes and intercepts for the income~time relationship. There could definitely be interactions between time and some of the other explanatory variables like age, gender and education. 
+
+```{r}
+ggplot(income, aes(y = log(income), x = year)) + geom_point() + facet_wrap(~sex) + stat_smooth(method = "lm") + ggtitle("Log(Income)~Year grouped by Sex")
+```
+
+```{r}
+ggplot(income, aes(y = log(income), x = year)) + geom_point() + facet_wrap(~educ) + stat_smooth(method="lm") + ggtitle("Log(Income)~Year grouped by Education Level")
+```
 
 ##43
 
+After running the unconditional means model I wanted to investigate the intraclass correlation. The computed intraclass correlation was .522. This indicates that about 52% of the variation in the data can be explained by grouping individuals responses together. This left about 48% of the variation in the data up to random noise with just the unconditional means model.
+
+We then ran a unconditional growth model. Our unconditional growth model decreased our residual variation by about 47% ((.52 - .27)/(.52)). With the unconditional growth model, our residual variance now only accounts for about 2% of the variation in our data. Also another thing of note is that our variance in the intercept per person went from .5 without taking into account year, to 12.9 when year was being accounted for in the growth model. 
+
+```{r, echo=T, results='hide'}
+income.lmerM <- lmer(log(income)~(1|person), data = income)
+summary(income.lmerM, cor = F)
+mean.resid <- .5145
+intraclass.cor <- .5612/(.5145 + .5612)
+income.lmerG <- lmer(log(income)~year + (year|person), data = income)
+summary(income.lmerG, cor = F)
+growth.resid <- .2708
+decrease.in.resid <- (mean.resid - growth.resid) / mean.resid
+growth.resid.percent <- .271 / (.217+.0021 + 12.9)
+```
+
 ##44
+
+To determine which random effects we are going to keep I added all of the fixed effects into the model by themselves. Then after determining which random effects we need, I will narrow down any of the fixed effects and possibly add interactions where needed.
+
+$log(Income)_{ij} = a_i + b_i(Year) + \epsilon_{ij}$
+
+$a_i = \alpha_0 + \alpha_1(age) + \alpha_2(educ) + \alpha_3(male) + \mu_i$
+$b_i = \beta_0 + \beta_1(age) + \beta_2(educ) + \beta_3(male) + v_i$
+
+Composite = $log(Income)_{ij} =  \alpha_0 + \alpha_1(age) + \alpha_2(educ) + \alpha_3(male) + \beta_0(Year) + \beta_1(age:year) + \beta_2(educ:year) + \beta_3(male:year) + \mu_i + v_i(year) + \epsilon_{ij}$
+
+```{r}
+income.lmer1 <- lmer(log(income)~year*(age+educ+sex) + (1|person), data = income)
+income.lmer2 <- lmer(log(income)~year*(age+educ+sex) + (year|person), data = income)
+l0 <- logLik(income.lmer2)
+l1 <- logLik(income.lmer1)
+D <- 2*(l0-l1)
+1 - pchisq(D,2)
+```
 
 ##45
 
